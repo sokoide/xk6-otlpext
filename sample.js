@@ -17,7 +17,7 @@ export function setup(){
 
 // 3. default ... this function is called many timed per iteration per VU
 export default function(){
-	let traceId = otlpext.sendTrace("hoge");
+	let traceId = otlpext.sendTrace("hoge", 100);
 	// this function is called per -u (local counter is per user)
 	localCounter++;
 	console.log(`${traceId} sent. otlpext counter:${otlpext.counter} local counter:${localCounter}`);

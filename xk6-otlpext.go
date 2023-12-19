@@ -67,7 +67,11 @@ func (o *OTLPExt) InitProvider() error {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
-	var otlpTracesEndpoint string = DefaultOtlpTracesEndpoint
+	var otlpTracesEndpoint = o.OtlpTracesEndpoint
+
+	if o.OtlpTracesEndpoint == "" {
+		otlpTracesEndpoint = DefaultOtlpTracesEndpoint
+	}
 
 	if strings.HasPrefix(otlpTracesEndpoint, "http://") {
 		otlpTracesEndpoint = otlpTracesEndpoint[7:]
@@ -119,16 +123,21 @@ func (o *OTLPExt) Shutdown() {
 	}
 }
 
-func (o *OTLPExt) SendTrace(spanName string) string {
-	var span trace.Span
+func (o *OTLPExt) SendTrace(spanName string, numSpans int) string {
 	ctx := context.Background()
 	log.Debugf("Sending a span '%s' as a service '%s'", spanName, TracerName)
 
-	ctx, span = otel.Tracer(TracerName).Start(ctx, spanName)
-	atomic.AddUint64(&o.counter, 1)
-	o.Counter = atomic.LoadUint64(&o.counter)
-	defer span.End()
+	var lastSpanID string
 
-	log.Debugf("TraceID: %s, SpanID: %s", span.SpanContext().TraceID(), span.SpanContext().SpanID())
-	return span.SpanContext().TraceID().String()
+	for i := 0; i < numSpans; i++ {
+		var span trace.Span
+		ctx, span = otel.Tracer(TracerName).Start(ctx, spanName)
+		atomic.AddUint64(&o.counter, 1)
+		o.Counter = atomic.LoadUint64(&o.counter)
+		log.Debugf("TraceID: %s, SpanID: %s", span.SpanContext().TraceID(), span.SpanContext().SpanID())
+		defer span.End()
+		lastSpanID = span.SpanContext().TraceID().String()
+	}
+
+	return lastSpanID
 }
